@@ -1,0 +1,13 @@
+# Google Apps Script CLI (clasp) specific configuration
+# Contains the secret Script ID linked directly to your Google Drive account
+.clasp.json
+
+# Local clasp configuration to be ignored
+.claspignore
+
+# Secret environment variable files (API Keys, Tokens)
+.env
+.env.*
+
+# Dependency folder 
+node_modules/
