@@ -32,7 +32,7 @@ function archivePreviousMonthToPDF() {
     if (targetSheet) {
       // --- Hide Column B ---
 
-      // Hide Column B (Email/Privacy) before exporting to PDF temporarily
+      // Hide Column B (Email/Privacy) temporarily before exporting to PDF
       targetSheet.hideColumns(2); 
       SpreadsheetApp.flush(); 
       
@@ -60,17 +60,17 @@ function archivePreviousMonthToPDF() {
       var folderIterator = DriveApp.getFoldersByName(CONFIG.PDF_FOLDER_NAME);
       var targetFolder;
       
-      // Check if the folder exists; if not, create it to avoid script crash
+      // Check if the folder exists; if not, create it to avoid script crashes
       if (folderIterator.hasNext()) {
-        targetFolder = folderIterator.next(); // Take the first folder with the specified name
+        targetFolder = folderIterator.next(); 
       } else {
         targetFolder = DriveApp.createFolder(CONFIG.PDF_FOLDER_NAME);
       }
       
-      // Save the PDF file to the specified folder in Google Drive
+      // Save file in the specific folder
       targetFolder.createFile(blob);
 
-      Logger.log("Laporan bulanan " + targetSheetName + " berhasil diarsipkan ke folder " + CONFIG.PDF_FOLDER_NAME);
+      Logger.log("Monthly report " + targetSheetName + " successfully archived to folder " + CONFIG.PDF_FOLDER_NAME);
       // ----------
       
       // --- Discord Webhook ---
@@ -80,7 +80,7 @@ function archivePreviousMonthToPDF() {
                     "📁 Lokasi Simpan: Folder **" + CONFIG.PDF_FOLDER_NAME + "** di Google Drive\n" +
                     "✨ *Catatan: Kolom Email/Privasi telah disembunyikan secara otomatis.*\n" +
                     "--------------------------------------------------------";
-                      
+                    
       var payload = {
         "content": message
       };
@@ -92,14 +92,49 @@ function archivePreviousMonthToPDF() {
         "muteHttpExceptions": true
       };
         
-      UrlFetchApp.fetch(CONFIG.WEBHOOK_URL, options);
+      // Execution block for sending to Discord with Retry Loop
+      var response = UrlFetchApp.fetch(CONFIG.WEBHOOK_URL, options);
+      var responseCode = response.getResponseCode();
+      var attempts = 0;
+      var maxAttempts = 5; // Max attempts to prevent long script timeouts
+
+      while (responseCode === 429 && attempts < maxAttempts) {
+        attempts++;
+        var responseText = response.getContentText();
+        var sleepTime = 2000; // Default 2-second delay if JSON parsing fails
+      
+        try {
+          var responseJson = JSON.parse(responseText);
+          if (responseJson.retry_after) {
+            // Discord sends retry_after value in seconds (can be decimal)
+            // Converted to milliseconds + 500ms extra buffer for safety
+            sleepTime = Math.ceil(responseJson.retry_after * 1000) + 500;
+          }
+        } catch (err) {
+          // If the response is not JSON, use exponential backoff strategy
+          sleepTime = Math.pow(2, attempts) * 1000;
+        }
+      
+        Logger.log("Discord Rate Limit detected (429). Sleeping for " + sleepTime + " ms before retrying (Attempt " + attempts + "/" + maxAttempts + ")...");
+        Utilities.sleep(sleepTime);
+      
+        // Retry the request after sleeping
+        response = UrlFetchApp.fetch(CONFIG.WEBHOOK_URL, options);
+        responseCode = response.getResponseCode();
+      }
+    
+      if (responseCode >= 200 && responseCode < 300) {
+        Logger.log("Discord notification sent successfully.");
+      } else {
+        Logger.log("Failed to send notification after " + maxAttempts + " attempts. HTTP Code: " + responseCode);
+      }
       // ----------
       
     } else {
-      Logger.log("Tab " + targetSheetName + " tidak ditemukan untuk diarsipkan.");
+      Logger.log("Sheet " + targetSheetName + " not found for archiving.");
     }
     
   } catch(error) {
-    Logger.log("Gagal membuat arsip PDF: " + error.toString());
+    Logger.log("Failed to create PDF archive: " + error.toString());
   }
 }
