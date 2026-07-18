@@ -92,11 +92,11 @@ function autoRouteMonthlyForm(e) {
     
     // Construct the message text template (Discord uses ** for bold text)
     var message = "--------------------------------------------------------\n" + 
-                  "🔔 **New Financial Record**\n\n" +
-                  "📅 Time: " + tanggal + "\n" +
-                  "🗂 Description: " + keterangan + "\n" +
+                  "🔔 **Catatan Keuangan Baru**\n\n" +
+                  "📅 Waktu: " + tanggal + "\n" +
+                  "🗂 Keterangan: " + keterangan + "\n" +
                   "↕️ Status: **" + status + "**\n" +
-                  "💰 Amount: **" + formatUang + "**\n" +
+                  "💰 Nominal: **" + formatUang + "**\n" +
                   "📝 Bank Account: " + bank_account + "\n" +
                   "--------------------------------------------------------";
                   
